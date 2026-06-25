@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="robots" content="noindex,nofollow,noarchive">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContextForge Explainer</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161922;
+    --border: #262b36;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --green: #3fb950;
+    --blue: #58a6ff;
+    --amber: #d29922;
+    --red: #f85149;
+    --violet: #a371f7;
+    --font-prose: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-prose);
+    line-height: 1.75;
+    margin: 0;
+    padding: 2.5rem 1.5rem;
+    font-size: 19px;
+    display: flex;
+    justify-content: center;
+  }
+  .container {
+    max-width: 760px;
+    width: 100%;
+  }
+  p { margin-top: 0; margin-bottom: 1.35em; }
+  h1, h2, h3 {
+    color: #fff;
+    margin-top: 2em;
+    margin-bottom: 1em;
+  }
+  h1 { font-size: 2.5em; margin-top: 1em; }
+  h2 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  p { margin-bottom: 1.5em; }
+  
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  .def-card {
+    border-left: 4px solid var(--blue);
+  }
+  .def-card.amber { border-left-color: var(--amber); }
+  .def-term {
+    font-family: var(--font-mono);
+    font-weight: bold;
+    color: var(--blue);
+    font-size: 1.1em;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .def-card.amber .def-term { color: var(--amber); }
+  .def-analogy {
+    font-style: italic;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    font-size: 0.95em;
+  }
+
+  .step-panel {
+    position: relative;
+    padding-left: 4rem;
+    margin-bottom: 2.5rem;
+  }
+  .step-badge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--card-bg);
+    border: 2px solid var(--violet);
+    color: var(--violet);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+  .step-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #fff;
+  }
+  .mono-box {
+    font-family: var(--font-mono);
+    background: #000;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 0.95em;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    color: #c9d1d9;
+    white-space: pre;
+  }
+  
+  .highlight-row { color: var(--green); font-weight: bold; }
+  .highlight-text { font-family: var(--font-mono); font-weight: bold; }
+  
+  .chart-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+  
+  .bar-chart {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+    margin-bottom: 1rem;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .bar-label {
+    width: 200px;
+    text-align: right;
+    padding-right: 1rem;
+    color: var(--text-muted);
+  }
+  .bar-row.active .bar-label {
+    color: var(--text);
+    font-weight: bold;
+  }
+  .bar-track {
+    flex: 1;
+    height: 20px;
+    background: #000;
+    border-radius: 3px;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--border);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    padding-right: 8px;
+    justify-content: flex-end;
+    color: #fff;
+    font-size: 0.88em;
+  }
+  .bar-row.active .bar-fill {
+    background: var(--amber);
+    box-shadow: 0 0 8px rgba(210, 153, 34, 0.4);
+    color: #000;
+    font-weight: bold;
+  }
+
+  .break-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media(min-width: 600px) {
+    .break-box { flex-direction: row; }
+  }
+  .break-half {
+    flex: 1;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--red);
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+  }
+  th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--text-muted);
+    font-weight: normal;
+  }
+  tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ContextForge Explainer</h1>
+  <p>ContextForge is a small program that sits between your app and the LLM. It stores all your knowledge in a plain file (SQLite), and for each question it pulls ONLY the few relevant pieces into the LLM's context — instead of pasting everything. No special database, no AI training. Just <code>pip install</code>.</p>
+  
+  <h2>1. The Problem</h2>
+  <p>An LLM (like ChatGPT or Copilot) has a <strong>context window</strong> — a limited amount of text it can read at once. If you have a big pile of knowledge (say, a hospital's 73 registry-field definitions, or 4,000, or a million), you CANNOT paste it all into every question. It's expensive and eventually doesn't fit.</p>
+  <p>The naive fix — pasting everything every time — gets linearly more expensive as your knowledge grows. ContextForge's claim: you can keep the cost <strong>flat</strong> no matter how big the knowledge gets. This explainer proves how.</p>
+
+  <h2>2. Definitions</h2>
+  <div class="card def-card">
+    <span class="def-term">TOKEN</span>
+    A chunk of text the model counts and charges by. About ¾ of a word ("cardiogenic" ≈ 3 tokens).
+    <div class="def-analogy">Analogy: The ticks on a taxi meter.</div>
+  </div>
+  <div class="card def-card">
+    <span class="def-term">CONTEXT WINDOW</span>
+    The model's short-term memory / desk space. It is limited, and you pay for everything sitting on the desk.
+    <div class="def-analogy">Analogy: A physical desk where you can only fit so many open books at once.</div>
+  </div>
+  <div class="card def-card">
+    <span class="def-term">CORPUS</span>
+    Your whole pile of knowledge documents. In our example, a set of 73 field definitions.
+    <div class="def-analogy">Analogy: The entire library building.</div>
+  </div>
+  <div class="card def-card">
+    <span class="def-term">BM25</span>
+    A 40-year-old keyword-matching formula. It scores how well a document matches the words in your question. It is NOT AI — just counting word overlaps, weighted so rare words matter more.
+    <div class="def-analogy">Analogy: A librarian who checks the card catalog and hands you the 1-2 right books.</div>
+  </div>
+  <div class="card def-card amber">
+    <span class="def-term">EMBEDDINGS</span>
+    The AI way to match text by MEANING rather than exactly matching words. ContextForge deliberately skips this — that's why it is fast and needs zero infrastructure, but also why it has one specific blind spot.
+  </div>
+
+  <h2>3. The Givens</h2>
+  <p>Let's look at what we start with for our proof:</p>
+  <ul>
+    <li><strong>The Corpus:</strong> 73 registry field documents. Total size is <span style="font-family:var(--font-mono)">2,562</span> tokens. (If pasted whole, every question costs 2,562 tokens of "knowledge" just to set up).</li>
+    <li><strong>The Question:</strong> "What SCAI stages are allowed for cardiogenic shock at admission?"</li>
+  </ul>
+  <p>Here is one real document from the corpus — the "gold" document that actually answers our question. It is only 44 tokens long:</p>
+  <div class="mono-box">Registry: NY DOH-2254a Cardiogenic Shock
+Field: SCAI stage at admission (id: scai_stage_admit)
+Type: enum
+Allowed values: A | B | C | D | E
+Charted in: Cardiology assessment</div>
+
+  <h2>4. The Walkthrough</h2>
+  <p>How ContextForge answers this question, step by step.</p>
+
+  <div class="step-panel">
+    <div class="step-badge">1</div>
+    <div class="step-title">Turn the question into keywords</div>
+    <div class="mono-box">[scai, stages, allowed, cardiogenic, shock, admission]</div>
+    <p>ContextForge throws away filler words ("what", "are", "for") and extracts exactly these 6 content words from the user's question.</p>
+  </div>
+
+  <div class="step-panel">
+    <div class="step-badge">2</div>
+    <div class="step-title">Score every doc by keyword match (BM25)</div>
+    <div class="bar-chart">
+      <div class="bar-row active">
+        <div class="bar-label">scai_stage_admit</div>
+        <div class="bar-track"><div class="bar-fill" style="width: 100%;">10.97</div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">scai_stage_max</div>
+        <div class="bar-track"><div class="bar-fill" style="width: 98%;">10.82</div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">admit_source</div>
+        <div class="bar-track"><div class="bar-fill" style="width: 46%;">5.11</div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">admit_date / bnp_admit</div>
+        <div class="bar-track"><div class="bar-fill" style="width: 33%;">3.65</div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">map_admit</div>
+        <div class="bar-track"><div class="bar-fill" style="width: 33%;">3.61</div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">lactate_admit</div>
+        <div class="bar-track"><div class="bar-fill" style="width: 32%;">3.58</div></div>
+      </div>
+    </div>
+    <p>The document that literally contains "SCAI", "stage", and "admission" scores far above the rest. The librarian found the right book using weighted word counting. (Note the runner-ups share the word "admission", scoring above zero).</p>
+  </div>
+
+  <div class="step-panel">
+    <div class="step-badge">3</div>
+    <div class="step-title">Load only the top slice</div>
+    <p>ContextForge puts only the top 20 documents (out of 73) into the prompt. The #1 document (our answer) is included. The resulting prompt size is <span class="highlight-text" style="color:var(--blue)">1,203 tokens</span> (instead of 2,562 if we pasted all 73).</p>
+  </div>
+
+  <div class="step-panel">
+    <div class="step-badge">4</div>
+    <div class="step-title">The model answers</div>
+    <div class="mono-box" style="color: var(--green);">"The allowed SCAI stages are A, B, C, D, or E."</div>
+    <p>The model reads the focused slice and returns the correct answer directly from the gold document.</p>
+  </div>
+
+  <h2>5. The Lemma (The Small Result)</h2>
+  <div class="card">
+    <p>For this question, ContextForge sent <strong>1,203 tokens</strong> instead of <strong>2,562 tokens</strong>.</p>
+    <p>Savings ratio = <span class="highlight-text">2,562 / 1,203 = 2.13x</span>.</p>
+    <p>On 73 documents, this is a modest improvement. But it sets up the real power of the system.</p>
+  </div>
+
+  <h2>6. The Theorem (The Big Result)</h2>
+  <p>The savings <strong>grow without limit</strong> as the corpus grows. Because ContextForge always loads a fixed-size slice (the top ~20 relevant documents) regardless of how many documents exist, the prompt size stays CONSTANT while the knowledge base grows.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>Documents</th>
+        <th>Disk Size (Corpus)</th>
+        <th>Prompt Sent to Model</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>100</td>
+        <td>4 KB</td>
+        <td>1,200 tokens</td>
+      </tr>
+      <tr>
+        <td>500</td>
+        <td>580 KB</td>
+        <td>1,200 tokens</td>
+      </tr>
+      <tr>
+        <td>1,500</td>
+        <td>1,692 KB</td>
+        <td>1,200 tokens</td>
+      </tr>
+      <tr>
+        <td>4,000</td>
+        <td><span class="highlight-text" style="color:var(--blue)">4,544 KB (1,136x increase)</span></td>
+        <td><span class="highlight-text" style="color:var(--green)">1,200 tokens (1.00x flat)</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="chart-container">
+    <svg viewBox="0 0 600 300" width="100%" height="100%">
+      <!-- axes -->
+      <line x1="50" y1="250" x2="550" y2="250" stroke="var(--border)" stroke-width="2"/>
+      <line x1="50" y1="50" x2="50" y2="250" stroke="var(--border)" stroke-width="2"/>
+      <!-- x axis labels -->
+      <text x="50" y="270" fill="var(--text-muted)" font-family="var(--font-mono)" font-size="12" text-anchor="middle">100 docs</text>
+      <text x="550" y="270" fill="var(--text-muted)" font-family="var(--font-mono)" font-size="12" text-anchor="middle">4,000 docs</text>
+      
+      <!-- flat line for prompt -->
+      <line x1="50" y1="220" x2="550" y2="220" stroke="var(--green)" stroke-width="3"/>
+      <circle cx="50" cy="220" r="4" fill="var(--green)"/>
+      <circle cx="550" cy="220" r="4" fill="var(--green)"/>
+      <text x="560" y="224" fill="var(--green)" font-family="var(--font-mono)" font-size="12">1,200 tokens</text>
+      
+      <!-- climbing line for disk size -->
+      <path d="M 50 248 Q 250 240, 550 50" fill="none" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="50" cy="248" r="4" fill="var(--blue)"/>
+      <circle cx="550" cy="50" r="4" fill="var(--blue)"/>
+      <text x="560" y="55" fill="var(--blue)" font-family="var(--font-mono)" font-size="12">4,544 KB (Disk)</text>
+      
+      <!-- annotation -->
+      <line x1="400" y1="220" x2="400" y2="80" stroke="var(--text-muted)" stroke-dasharray="4,4"/>
+      <text x="390" y="150" fill="var(--text-muted)" font-size="14" text-anchor="end">Decoupled growth</text>
+    </svg>
+  </div>
+  <p>The naive approach would have grown to ~1.1 MILLION tokens and stopped fitting in the model at all. This is the whole point: <strong>cost is decoupled from knowledge size</strong>. It's a library with a million books, but you only ever carry 2 to your desk.</p>
+
+  <h2>7. Where the Proof Breaks</h2>
+  <p>The theorem rests on Step 2 working correctly: BM25 must find the right document by matching <strong>WORDS</strong>. If the user asks the same thing using <em>different</em> words than the document uses, the word-overlap is zero and the librarian hands back nothing useful.</p>
+  
+  <div class="break-box">
+    <div class="break-half">
+      <div style="font-weight:bold; color:var(--text-muted); margin-bottom:0.5rem; font-size:0.88em; text-transform:uppercase;">The Document</div>
+      <div style="font-family:var(--font-prose);">"...the longest acceptable interval between a patient's arrival and restoration of coronary blood flow is 88 minutes."</div>
+    </div>
+    <div class="break-half">
+      <div style="font-weight:bold; color:var(--text-muted); margin-bottom:0.5rem; font-size:0.88em; text-transform:uppercase;">The Question</div>
+      <div style="font-family:var(--font-prose);">"What is the maximum allowed door-to-balloon time?"</div>
+    </div>
+  </div>
+  <div style="text-align:center; font-family:var(--font-mono); color:var(--red); font-weight:bold; margin-bottom:1.5rem; font-size: 1.2em; border: 1px dashed var(--red); padding: 1rem; border-radius: 6px;">
+    Shared content words: ZERO
+  </div>
+  <p>Because there are zero shared words, ContextForge does not retrieve the document. The answer is sitting in the corpus, unseen. This is the cost of skipping <strong>Embeddings</strong> (meaning-matching). ContextForge trades meaning-robustness for extreme speed and zero infrastructure.</p>
+  <p>Two more breakages in this family:</p>
+  <ul>
+    <li><strong>Aggregation:</strong> "Which patient had the HIGHEST lactate?" Keyword matching cannot rank or aggregate data across documents, and the model only ever sees a tiny slice, never the whole pile. Structurally unanswerable.</li>
+    <li><strong>Absence:</strong> Asking about something not in the corpus (e.g. potassium). ContextForge will just return 20 unrelated documents that happen to score highest. It has no way to say "I don't have that."</li>
+  </ul>
+
+  <h2>8. The Takeaway</h2>
+  <p>ContextForge is a librarian (BM25 keyword search) paired with a warehouse (a SQLite file). It keeps your LLM cheap and fast by carrying only the 1-2 relevant documents to the desk per question, and that savings grows without limit as your knowledge grows — PROVEN by the flat 1,200-token line against a 1,136x bigger corpus. The catch: the librarian matches WORDS, not MEANING, so it whiffs when you phrase a question differently than the document, or ask it to reason across the whole pile. Great for "look up the exact field/term"; not for "understand my whole dataset." Use it for fast lookup, and pair it with a smart model.</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="robots" content="noindex,nofollow,noarchive">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContextForge: Finding the Retrieval Wall</title>
+<style>
+  :root {
+    --bg-main: #0d1117;
+    --bg-card: #161922;
+    --border-color: #262b36;
+    --text-main: #c9d1d9;
+    --text-muted: #8b949e;
+    --text-heading: #ffffff;
+    --color-green: #3fb950;
+    --color-green-glow: rgba(63, 185, 80, 0.15);
+    --color-amber: #d29922;
+    --color-amber-glow: rgba(210, 153, 34, 0.15);
+    --color-red: #f85149;
+    --color-red-glow: rgba(248, 81, 73, 0.15);
+    --color-blue: #58a6ff;
+    --color-violet: #a371f7;
+    --color-violet-glow: rgba(163, 113, 247, 0.15);
+    
+    --font-prose: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-prose);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    background-image: 
+      linear-gradient(rgba(38, 43, 54, 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(38, 43, 54, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-attachment: fixed;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 4rem 20px;
+  }
+
+  .full-bleed {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding: 2rem 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .full-bleed-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  h1, h2, h3, h4 {
+    color: var(--text-heading);
+    margin-top: 0;
+  }
+
+  h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    background: linear-gradient(to right, #fff, #8b949e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  .stat-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .chip-green { color: var(--color-green); border-color: rgba(63, 185, 80, 0.3); background: var(--color-green-glow); }
+  .chip-amber { color: var(--color-amber); border-color: rgba(210, 153, 34, 0.3); background: var(--color-amber-glow); }
+  .chip-red { color: var(--color-red); border-color: rgba(248, 81, 73, 0.3); background: var(--color-red-glow); }
+  .chip-violet { color: var(--color-violet); border-color: rgba(163, 113, 247, 0.3); background: var(--color-violet-glow); }
+  .chip-blue { color: var(--color-blue); }
+
+  .lineage-note {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 4rem;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+
+  .card-title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .callout {
+    border-left: 3px solid var(--color-blue);
+    background: rgba(88, 166, 255, 0.05);
+    padding: 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 24px 0;
+  }
+  .callout-amber {
+    border-left-color: var(--color-amber);
+    background: var(--color-amber-glow);
+  }
+  .callout-violet {
+    border-left-color: var(--color-violet);
+    background: var(--color-violet-glow);
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin: 24px 0;
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    margin: 24px 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  th {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .hero-number {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--color-green);
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    letter-spacing: -0.05em;
+  }
+
+  .stacked-bar-container {
+    margin: 16px 0;
+  }
+  .stacked-bar-label {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .stacked-bar {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--border-color);
+    display: flex;
+    overflow: hidden;
+  }
+  .bar-segment-green { background: var(--color-green); }
+  .bar-segment-blue { background: var(--color-blue); }
+  .bar-segment-red { background: var(--color-red); }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border-color), transparent);
+    margin: 4rem 0;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 6rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    background: rgba(255,255,255,0.1);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  .bottom-line-list {
+    list-style: none;
+    padding: 0;
+  }
+  .bottom-line-list li {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 16px;
+  }
+  .bottom-line-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--color-violet);
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HERO -->
+  <header>
+    <h1>ContextForge: <br>Finding the Retrieval Wall</h1>
+    <div class="subtitle">Empirical evaluation of an "unlimited memory" SQLite + BM25 retrieval SDK for any LLM.</div>
+    
+    <div class="stat-strip">
+      <span class="chip"><span style="color: var(--text-heading)">129</span> passing tests</span>
+      <span class="chip chip-violet">1,136x disk growth → 1.00x prompt</span>
+      <span class="chip chip-red">3 retrieval failure modes found</span>
+      <span class="chip chip-green">0/144 hallucinations (strict prompt)</span>
+      <span class="chip chip-red">5/72 when the strict prompt is removed</span>
+    </div>
+    
+    <div class="lineage-note">Companion to the markdown-side "workingset" study.</div>
+  </header>
+
+  <!-- WHAT WE'RE TESTING -->
+  <section>
+    <h2>What We're Testing</h2>
+    <p>
+      ContextForge is an Apache-2.0 Python SDK (2,389 LOC) acting as a middleware between an app and an LLM. It ingests a corpus into a SQLite knowledge tree and retrieves a "working set" per query via an in-memory BM25 keyword index—<strong>no vector database, no embeddings server.</strong> The core question: Does it actually deliver cheap, accurate, honest retrieval at scale, or does it break? We tested it the empirical way: find the boundary, report it.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- THE KEY ILLUSTRATION -->
+  <section class="full-bleed">
+    <div class="full-bleed-content">
+      <h2>What's In The Data vs. What's Asked</h2>
+      <p style="color: var(--text-muted); margin-bottom: 24px;">The corpus: 73 real registry field definitions (~2,562 tokens) spanning Cardiology registries.</p>
+      
+      <svg viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg">
+        <!-- Definitions -->
+        <defs>
+          <linearGradient id="gradHit" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#262b36" />
+            <stop offset="100%" stop-color="#3fb950" />
+          </linearGradient>
+          <linearGradient id="gradMiss" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#262b36" />
+            <stop offset="100%" stop-color="#f85149" />
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- LEFT SIDE: CORPUS DOCS -->
+        <g transform="translate(50, 50)">
+          <text x="0" y="-20" fill="#8b949e" font-family="ui-monospace" font-size="12">THE CORPUS (BM25 Index)</text>
+          
+          <!-- Doc 1 -->
+          <rect x="0" y="0" width="220" height="60" rx="6" fill="#161922" stroke="#262b36"/>
+          <text x="15" y="25" fill="#c9d1d9" font-family="ui-monospace" font-size="12" font-weight="bold">scai_stage_admit</text>
+          <text x="15" y="45" fill="#8b949e" font-family="system-ui" font-size="11">[A | B | C | D | E]</text>
+
+          <!-- Doc 2 -->
+          <rect x="0" y="80" width="220" height="60" rx="6" fill="#161922" stroke="#262b36"/>
+          <text x="15" y="105" fill="#c9d1d9" font-family="ui-monospace" font-size="12" font-weight="bold">door_to_balloon_min</text>
+          <text x="15" y="125" fill="#8b949e" font-family="system-ui" font-size="11">blood flow restoration</text>
+
+          <!-- Doc 3 -->
+          <rect x="0" y="160" width="220" height="60" rx="6" fill="#161922" stroke="#262b36"/>
+          <text x="15" y="185" fill="#c9d1d9" font-family="ui-monospace" font-size="12" font-weight="bold">mcs_type</text>
+          <text x="15" y="205" fill="#8b949e" font-family="system-ui" font-size="11">Impella, IABP, VA-ECMO</text>
+
+          <!-- Many more docs hint -->
+          <path d="M 110 240 L 110 260" stroke="#8b949e" stroke-dasharray="4 4"/>
+          <text x="110" y="280" fill="#8b949e" font-family="ui-monospace" font-size="12" text-anchor="middle">+ 70 more docs</text>
+        </g>
+
+        <!-- CONNECTING LINES -->
+        <g transform="translate(270, 50)">
+          <!-- Hit line (Green) -->
+          <path d="M 0 30 C 150 30, 200 30, 350 30" fill="none" stroke="url(#gradHit)" stroke-width="3" filter="url(#glow)"/>
+          <circle cx="350" cy="30" r="4" fill="#3fb950"/>
+
+          <!-- Miss Paraphrase line (Red Dashed) -->
+          <path d="M 0 110 C 150 110, 200 110, 350 110" fill="none" stroke="#f85149" stroke-width="2" stroke-dasharray="6 6"/>
+          <circle cx="350" cy="110" r="4" fill="#f85149"/>
+          <text x="175" y="100" fill="#f85149" font-family="ui-monospace" font-size="10" text-anchor="middle">0 shared words = MISS</text>
+
+          <!-- Absent line (Red, pointing to nowhere) -->
+          <path d="M 350 190 C 250 190, 150 250, 0 250" fill="none" stroke="#f85149" stroke-width="2" opacity="0.5"/>
+          <text x="175" y="235" fill="#f85149" font-family="ui-monospace" font-size="10" text-anchor="middle">Hits Distractors</text>
+        </g>
+
+        <!-- RIGHT SIDE: QUERIES -->
+        <g transform="translate(620, 50)">
+          <text x="0" y="-20" fill="#8b949e" font-family="ui-monospace" font-size="12">THE QUERIES</text>
+          
+          <!-- Query 1 (Hit) -->
+          <rect x="0" y="0" width="280" height="60" rx="6" fill="rgba(63, 185, 80, 0.1)" stroke="#3fb950"/>
+          <text x="15" y="25" fill="#ffffff" font-family="system-ui" font-size="14">"What SCAI stages allowed?"</text>
+          <text x="15" y="45" fill="#3fb950" font-family="ui-monospace" font-size="11">Exact Match (scai)</text>
+
+          <!-- Query 2 (Paraphrase) -->
+          <rect x="0" y="80" width="280" height="60" rx="6" fill="rgba(248, 81, 73, 0.1)" stroke="#f85149"/>
+          <text x="15" y="105" fill="#ffffff" font-family="system-ui" font-size="14">"Maximum door-to-balloon time?"</text>
+          <text x="15" y="125" fill="#f85149" font-family="ui-monospace" font-size="11">Paraphrase (vs "restoration")</text>
+
+          <!-- Query 3 (Absent) -->
+          <rect x="0" y="160" width="280" height="60" rx="6" fill="rgba(248, 81, 73, 0.1)" stroke="#f85149"/>
+          <text x="15" y="185" fill="#ffffff" font-family="system-ui" font-size="14">"Max admission potassium?"</text>
+          <text x="15" y="205" fill="#f85149" font-family="ui-monospace" font-size="11">Data Not In Corpus</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- TEST 1 -->
+  <section>
+    <h2>Test 1: Basic Retrieval</h2>
+    <p><strong>Reasoning:</strong> Before adversarial testing, does BM25 surface the correct answer doc for a straightforward question? We ingested the 73 documents and asked 3 real questions to inspect which docs ContextForge places in the prompt (model-free).</p>
+    
+    <div class="card">
+      <div class="card-title">Results: Top hit correct every time</div>
+      <ul class="bottom-line-list">
+        <li><code>"What SCAI stages allowed?"</code> → <code>scai_stage_admit</code> ranked #1</li>
+        <li><code>"Which MCS device types?"</code> → <code>mcs_type</code> ranked #1</li>
+        <li><code>"NCDR access sites + door-to-balloon?"</code> → <code>access_site</code> #1, <code>door_to_balloon</code> #2</li>
+      </ul>
+    </div>
+
+    <div class="callout callout-amber">
+      <strong>Nuance:</strong> It retrieves a <em>slice</em> (~20 docs), not a laser 1-2 docs. The top hit is right, but ~18 other loosely-related fields ride along on shared vocabulary. For 73 docs, the token win over stuffing everything is only ~2x (1,200 vs 2,562 tokens). The real win requires scale.
+    </div>
+  </section>
+
+  <!-- TEST 2 -->
+  <section class="full-bleed">
+    <div class="full-bleed-content">
+      <h2>Test 2: Scale & Flatness</h2>
+      <p><strong>Reasoning:</strong> ContextForge's signature claim is "active context stays constant as the corpus grows to infinity." We must verify the prompt sent to the model does NOT grow with disk size. We planted 6 "needle" answer docs and grew a homogeneous corpus up to 4,000 documents.</p>
+
+      <div class="grid-3" style="grid-template-columns: 1fr 2fr; align-items: center;">
+        <div>
+          <div class="hero-number">1,136x</div>
+          <div style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem;">Disk Growth</div>
+          <div class="hero-number" style="color: var(--color-violet);">1.00x</div>
+          <div style="font-size: 1.1rem; color: var(--text-muted);">Prompt Size Growth</div>
+        </div>
+        
+        <div>
+          <svg viewBox="0 0 600 300" style="background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border-color); padding: 10px;">
+            <defs>
+              <linearGradient id="fillDisk" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#a371f7" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#a371f7" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid lines -->
+            <path d="M 50 250 L 550 250" stroke="#262b36"/>
+            <path d="M 50 180 L 550 180" stroke="#262b36" stroke-dasharray="2 4"/>
+            <path d="M 50 110 L 550 110" stroke="#262b36" stroke-dasharray="2 4"/>
+            <path d="M 50 40 L 550 40" stroke="#262b36" stroke-dasharray="2 4"/>
+            
+            <!-- Axes Labels -->
+            <text x="40" y="255" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="end">0</text>
+            <text x="40" y="45" fill="#a371f7" font-size="10" font-family="ui-monospace" text-anchor="end">4.5MB</text>
+            
+            <text x="50" y="270" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">100</text>
+            <text x="216" y="270" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">500</text>
+            <text x="383" y="270" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">1500</text>
+            <text x="550" y="270" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">4000 docs</text>
+
+            <!-- Disk Size Line (Non-linear scale mapped to height roughly) 4, 580, 1692, 4544 -->
+            <!-- Max is 4544 mapped to Y=40. Y = 250 - (val / 4544) * 210 -->
+            <path d="M 50 250 L 50 249.8 L 216 223 L 383 171 L 550 40" fill="none" stroke="#a371f7" stroke-width="3"/>
+            <path d="M 50 250 L 50 249.8 L 216 223 L 383 171 L 550 40 L 550 250 Z" fill="url(#fillDisk)"/>
+            <circle cx="550" cy="40" r="4" fill="#a371f7"/>
+            <text x="540" y="30" fill="#a371f7" font-size="12" font-family="ui-monospace" font-weight="bold" text-anchor="end">Disk Size (KB)</text>
+
+            <!-- Prompt Size Line (Constant 1200) -->
+            <!-- Since max is 4544, 1200 is at Y = 250 - (1200/4544)*210 = 250 - 55 = 195 -->
+            <path d="M 50 195 L 550 195" fill="none" stroke="#58a6ff" stroke-width="3"/>
+            <circle cx="550" cy="195" r="4" fill="#58a6ff"/>
+            <text x="540" y="185" fill="#58a6ff" font-size="12" font-family="ui-monospace" font-weight="bold" text-anchor="end">Prompt Tokens (Flat 1,200)</text>
+          </svg>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Corpus Docs</th>
+            <th>Ingest Time</th>
+            <th>DB Size (KB)</th>
+            <th>Avg Prompt Tokens</th>
+            <th>Query Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>100</td>
+            <td>0.23s</td>
+            <td>4</td>
+            <td><span class="chip chip-blue" style="padding: 2px 6px">1,200</span></td>
+            <td>0.4ms</td>
+          </tr>
+          <tr>
+            <td>500</td>
+            <td>0.86s</td>
+            <td>580</td>
+            <td><span class="chip chip-blue" style="padding: 2px 6px">1,200</span></td>
+            <td>0.5ms</td>
+          </tr>
+          <tr>
+            <td>1,500</td>
+            <td>2.34s</td>
+            <td>1,692</td>
+            <td><span class="chip chip-blue" style="padding: 2px 6px">1,200</span></td>
+            <td>1.2ms</td>
+          </tr>
+          <tr>
+            <td>4,000</td>
+            <td>11.56s</td>
+            <td>4,544</td>
+            <td><span class="chip chip-blue" style="padding: 2px 6px">1,200</span></td>
+            <td>3.2ms</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">* Token counts include Copilot CLI overhead. A naive "stuff the catalog" approach would have grown to ~1.1M tokens.</p>
+    </div>
+  </section>
+
+  <!-- TEST 3 -->
+  <section>
+    <h2>Test 3: The Retrieval Wall</h2>
+    <p><strong>Reasoning:</strong> Tests 1 & 2 were friendly, relying on exact keyword overlap. The honest question is: where does BM25-without-embeddings break? We designed three adversarial classes to find the wall.</p>
+
+    <div class="grid-3">
+      <!-- (A) Paraphrase Gap -->
+      <div class="card" style="margin-bottom: 0;">
+        <svg viewBox="0 0 200 120" style="margin-bottom: 16px;">
+          <rect x="10" y="10" width="180" height="40" rx="4" fill="#161922" stroke="#262b36"/>
+          <text x="100" y="30" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">Doc: "restoration of blood flow"</text>
+          
+          <rect x="10" y="70" width="180" height="40" rx="4" fill="rgba(248, 81, 73, 0.1)" stroke="#f85149"/>
+          <text x="100" y="90" fill="#ffffff" font-size="10" font-family="ui-monospace" text-anchor="middle">Query: "door-to-balloon time"</text>
+          
+          <path d="M 100 50 L 100 70" stroke="#f85149" stroke-width="2"/>
+          <line x1="90" y1="60" x2="110" y2="60" stroke="#f85149" stroke-width="2" />
+        </svg>
+        <div class="card-title">A. Paraphrase Gap</div>
+        <p style="font-size: 0.9rem;">0 shared content words results in a silent <strong>MISS</strong> at scale. When query vocabulary diverges from doc vocabulary, retrieval goes blind.</p>
+      </div>
+
+      <!-- (B) Cross-Doc Superlative -->
+      <div class="card" style="margin-bottom: 0;">
+        <svg viewBox="0 0 200 120" style="margin-bottom: 16px;">
+          <rect x="10" y="10" width="50" height="30" rx="4" fill="#161922" stroke="#262b36"/>
+          <text x="35" y="28" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">L: 2.1</text>
+          
+          <rect x="75" y="10" width="50" height="30" rx="4" fill="#161922" stroke="#262b36"/>
+          <text x="100" y="28" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">L: 4.5</text>
+          
+          <rect x="140" y="10" width="50" height="30" rx="4" fill="#161922" stroke="#3fb950"/>
+          <text x="165" y="28" fill="#3fb950" font-size="10" font-family="ui-monospace" text-anchor="middle" font-weight="bold">L: 99</text>
+
+          <rect x="10" y="70" width="180" height="40" rx="4" fill="rgba(210, 153, 34, 0.1)" stroke="#d29922"/>
+          <text x="100" y="90" fill="#ffffff" font-size="10" font-family="ui-monospace" text-anchor="middle">Query: "Highest lactate?"</text>
+
+          <!-- Only sees one -->
+          <path d="M 100 50 L 100 70" stroke="#d29922" stroke-width="2" stroke-dasharray="2 2"/>
+        </svg>
+        <div class="card-title">B. Aggregation</div>
+        <p style="font-size: 0.9rem;">BM25 cannot compute max/min. The model sees 20 docs, not all 4,000. It is structurally impossible to answer superlatives confidently.</p>
+      </div>
+
+      <!-- (C) Absence -->
+      <div class="card" style="margin-bottom: 0;">
+        <svg viewBox="0 0 200 120" style="margin-bottom: 16px;">
+          <rect x="10" y="10" width="180" height="40" rx="4" fill="#161922" stroke="#262b36"/>
+          <text x="100" y="25" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">Top 20 Distractor Docs</text>
+          <text x="100" y="40" fill="#8b949e" font-size="10" font-family="ui-monospace" text-anchor="middle">(1,698 tokens)</text>
+
+          <rect x="10" y="70" width="180" height="40" rx="4" fill="rgba(248, 81, 73, 0.1)" stroke="#f85149"/>
+          <text x="100" y="90" fill="#ffffff" font-size="10" font-family="ui-monospace" text-anchor="middle">Query: "Potassium?" (Absent)</text>
+
+          <path d="M 100 70 L 100 50" stroke="#f85149" stroke-width="2"/>
+          <polygon points="100,50 95,58 105,58" fill="#f85149"/>
+        </svg>
+        <div class="card-title">C. Absence / Abstention</div>
+        <p style="font-size: 0.9rem;">Retrieval has no abstain path. It always returns the top 20 hits. Handing pure distractors to the model is the leading risk of hallucination.</p>
+      </div>
+    </div>
+    
+    <div style="font-size: 1.1rem; text-align: center; margin-top: 2rem; font-weight: 600;">
+      ContextForge is great at "find the doc with these exact terms," but breaks on paraphrase, aggregation, and absence.
+    </div>
+  </section>
+
+  <!-- TEST 4 -->
+  <section class="full-bleed" style="margin-top: 4rem;">
+    <div class="full-bleed-content">
+      <h2>Test 4: The Model Safety Net</h2>
+      <p><strong>Reasoning:</strong> Test 3 proved ContextForge can hand a model pure distractors. Does a real model safely ABSTAIN or blindly INVENT an answer?</p>
+      
+      <div style="margin-bottom: 24px;">
+        <span class="chip">8 Models</span>
+        <span class="chip">120 Trials</span>
+        <span class="chip">Tools Locked</span>
+        <span class="chip">GitHub Copilot CLI</span>
+      </div>
+
+      <div style="display: flex; gap: 40px; align-items: center; margin-bottom: 40px;">
+        <div style="flex: 1; text-align: center;">
+          <div class="hero-number" style="font-size: 5rem;">0 / 72</div>
+          <div style="color: var(--color-green); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Hallucinations on trap questions</div>
+        </div>
+        <div style="flex: 2;">
+          <p>Every model was 6/6 correct on in-context data. On the 72 trap trials (Absent / Paraphrased where retrieval missed), <strong>P(hallucinate) = 0%</strong>. All 8 models abstained perfectly. <em>Opus</em> and <em>gpt-5-mini</em> replied exactly: <code>"Not in the provided data."</code></p>
+        </div>
+      </div>
+
+      <!-- Heatmap / Bar chart hybrid approach -->
+      <div class="card">
+        <div class="card-title">Performance by Model (n=15 trials each)</div>
+        
+        <!-- Model Rows -->
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>claude-opus-4.8</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>claude-sonnet-4.6</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>claude-sonnet-4.5</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>claude-haiku-4.5</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>gpt-5.5</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>gpt-5.4</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>gpt-5.4-mini</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+        <div class="stacked-bar-container">
+          <div class="stacked-bar-label"><span>gpt-5-mini</span> <span>6 Correct · 9 Abstain · 0 Hallucinate</span></div>
+          <div class="stacked-bar"><div class="bar-segment-green" style="width: 40%"></div><div class="bar-segment-blue" style="width: 60%"></div></div>
+        </div>
+      </div>
+
+      <div class="callout callout-violet">
+        <strong>THE OPEN QUESTION:</strong> This is the <em>opposite</em> of the earlier "workingset" benchmark, where small models hallucinated 33-67% of the time. There, the trap contained a <em>decoy</em>: a plausible-but-wrong number sitting in the context, waiting to be misattributed. Here, ContextForge's retrieval miss handed the model <em>clean</em> distractors—no plausible wrong answer present—so abstaining is easy.
+        <br><br>
+        That raised a hypothesis worth testing directly: <strong>does the danger return if a plausible decoy value rides along in the retrieved slice?</strong> So we ran a dedicated decoy test.
+      </div>
+    </div>
+  </section>
+
+  <!-- DECOY TEST (Test 5) -->
+  <section>
+    <span class="kicker" style="color: var(--color-violet);">Test 5 · The Decoy Test</span>
+    <h2>We Tried To Break The Safety Net—On Purpose</h2>
+    <p>
+      <strong>Reasoning:</strong> Test 4 fed models clean distractors and they abstained perfectly. But the report's own hypothesis was that the real danger is a retrieval miss <em>where a plausible wrong value co-occurs</em>. That claim was an inference, not a measurement. So we tested it.
+    </p>
+    <p>
+      <strong>Method:</strong> We planted a decoy document in the corpus phrased almost identically to the question, differing in one noun. Ask "maximum permissible admission <strong>potassium</strong>?" and the retrieved slice now contains "maximum permissible admission <strong>lactate</strong> value the validator accepts is <strong>22 mmol/L</strong>." A model that grabs <code>22</code> and attributes it to potassium has hallucinated by misattribution—the exact failure that broke small models in workingset. We verified ContextForge actually retrieved every decoy into the prompt (precondition met), then ran 3 decoy questions × 8 models × 3 reps = 72 trials with the same strict prompt.
+    </p>
+
+    <div class="callout callout-red" style="border-color: var(--color-green); background: rgba(63,185,80,0.06);">
+      <strong style="color: var(--color-green); font-size: 1.4rem;">Result: 0 / 72 hallucinations. The hypothesis did NOT reproduce.</strong>
+      <br><br>
+      Every model—including <code>gpt-5.4-mini</code> and <code>gpt-5-mini</code>, the two that cracked 33-67% in workingset—abstained on all 72 decoy trials. The most telling trial: <code>claude-haiku-4.5</code> answered <em>"Not in the provided data. The provided knowledge specifies a maximum of 6 simultaneous vasopressors, but does not contain [inotropes]."</em> The model <em>saw</em> the decoy value, recognized it belonged to a different field, and explicitly refused to misattribute it. Only 1 of 72 answers even surfaced the decoy number—and that one flagged the mismatch.
+    </div>
+
+    <div class="callout callout-amber">
+      <strong>The honest caveat:</strong> This refutes the danger-zone hypothesis <em>under these conditions</em>—but the conditions differ from workingset in two ways that matter. (1) Our decoy was <em>cross-field</em> (a lactate value vs. a potassium question), which any competent model can reject; workingset's decoy lived in the <em>same semantic field</em> as the question. (2) Our system prompt strictly licensed abstention ("if absent, reply exactly 'Not in the provided data'"); workingset used a softer framing. So we ran one more test to remove the second variable—a <em>permissive</em> prompt (Test 6, below). That's where the trap finally bit.
+    </div>
+  </section>
+
+  <!-- TEST 6: PERMISSIVE PROMPT CONTROL -->
+  <section>
+    <span class="kicker" style="color: var(--color-amber);">Test 6 · The Permissive-Prompt Control</span>
+    <h2>Take Away The Strict Prompt, And The Trap Finally Bites</h2>
+    <p>
+      Test 4 and Test 5 both used a strict prompt: <em>"Use ONLY the context. If the answer is absent, say so. Do NOT guess."</em> That left a question we hadn't answered: <strong>is the model intrinsically safe, or is the strict prompt doing the work?</strong> So we re-ran the three trap questions (2 absence + 1 paraphrase-miss) across all 8 models with a naive, permissive prompt—<em>"Answer the question using the knowledge provided. Be concise."</em>—no abstention license, no anti-guess clause. The naive-developer prompt. 72 trials, only the system prompt changed.
+    </p>
+
+    <div class="callout callout-amber" style="border-color: var(--color-red);">
+      <strong style="color: var(--color-red); font-size: 1.4rem;">Result: 5 / 72 hallucinations (~7%). The strict prompt WAS load-bearing.</strong>
+      <br><br>
+      Strict prompt: 0/72. Permissive prompt: 5/72. So the prompt is not cosmetic—removing it produced real hallucinations. But the pattern is the whole story: <strong>all 5 were the same question, and only the two mini models.</strong>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Where the 5 hallucinations landed (permissive, n=72)</div>
+      <div style="font-family: var(--font-mono); font-size: 0.95rem; line-height: 1.8;">
+        <div><strong>By question:</strong></div>
+        <div>&nbsp;&nbsp;ABS-k (potassium, absent) &nbsp;&nbsp;<span style="color:var(--color-green)">0 / 24</span></div>
+        <div>&nbsp;&nbsp;ABS-smoke (smoking, absent) &nbsp;<span style="color:var(--color-green)">0 / 24</span></div>
+        <div>&nbsp;&nbsp;PARA-d2b (door-to-balloon) &nbsp;&nbsp;<span style="color:var(--color-red)">5 / 24</span> &larr; all of them</div>
+        <br>
+        <div><strong>By model:</strong></div>
+        <div>&nbsp;&nbsp;opus-4.8 · sonnet-4.6 · sonnet-4.5 · haiku-4.5 · gpt-5.5 · gpt-5.4 &nbsp;<span style="color:var(--color-green)">0 / 9 each</span></div>
+        <div>&nbsp;&nbsp;<span style="color:var(--color-red)">gpt-5.4-mini &nbsp;2 / 9</span></div>
+        <div>&nbsp;&nbsp;<span style="color:var(--color-red)">gpt-5-mini &nbsp;&nbsp;&nbsp;3 / 9</span></div>
+      </div>
+    </div>
+
+    <div class="callout callout-violet">
+      <strong>The mechanism—and it's not "small models are dumber":</strong> Every hallucination was the mini models answering <em>"90 minutes"</em> to "longest acceptable door-to-balloon time." 90 minutes is the famous real-world cardiology standard—it lives in every model's <em>training data</em>. It is NOT in our corpus (the corpus never states a max, and CF's paraphrase miss meant the door-to-balloon doc was never even retrieved). So this isn't random fabrication: it's <strong>training-data substitution</strong>. When retrieval whiffed and the prompt didn't forbid guessing, the small models filled the gap with a well-known fact from memory instead of staying grounded in the context.
+      <br><br>
+      The two absence questions (potassium, smoking) stayed at <strong>0/72 even permissive</strong>—because there is no "registry potassium maximum" in any model's training data to substitute. Nothing to grab, so they abstain regardless of prompt. The trap requires BOTH a retrieval miss AND a famous answer the model already knows.
+    </div>
+
+    <div class="callout" style="border-color: var(--color-blue); background: rgba(88,166,255,0.06);">
+      <strong>What this means in practice:</strong> The strict prompt isn't insurance against gibberish—it's specifically what stops a model from substituting a well-known training-data fact when CF's retrieval missed the real document. Two concrete rules fall out: <strong>(1) always pair ContextForge with the strict "use only the context, don't guess" prompt</strong>, and <strong>(2) don't route grounded retrieval through a mini model</strong>—the frontier models (opus / sonnet / gpt-5.5 / gpt-5.4) stayed grounded even under the permissive prompt; only the minis leaned on the prior.
+    </div>
+  </section>
+
+  <!-- BOTTOM LINE -->
+  <section>
+    <h2>The Bottom Line</h2>
+    <div class="card" style="border-color: var(--color-blue); background: linear-gradient(180deg, var(--bg-card) 0%, #0d1424 100%);">
+      <ul class="bottom-line-list" style="margin: 0; font-size: 1.05rem;">
+        <li><strong>Flatness claim: ROCK SOLID.</strong> 1,136x disk growth results in 1.00x prompt size.</li>
+        <li><strong>Retrieval failures:</strong> 3 architectural failure modes (paraphrase, aggregation, absence)—all stemming from the lack of embeddings.</li>
+        <li><strong>Safety is conditional, and the condition is the prompt.</strong> With a strict "use only the context, don't guess" prompt: 0/144 hallucinations (clean distractors + planted decoys). Strip that prompt: 5/72 (~7%)—all on one paraphrase-miss question, all from the two mini models, all "90 minutes" substituted from training data. The model is a safety net only when (a) the prompt forbids guessing and (b) you're not using a mini for grounded retrieval. The frontier models stayed grounded even permissive.</li>
+        <li><strong>For Daily Work:</strong> Fast, zero-infra POC scaffold for "chat with exact-keyword data." Weak at whole-dataset reasoning. Pair with a frontier model and set expectations accordingly.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>Methodology: Model-free retrieval tests + real-model trials via GitHub Copilot CLI (mechanical grading).</p>
+    <p>ContextForge Empirical Study · Generated 2026</p>
+  </footer>
+</div>
+
+</body>
+</html>
