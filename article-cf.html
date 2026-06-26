@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>ContextForge — How It Actually Works (Live Demo)</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card2:#1c2230; --bd:#262b36; --bd2:#30363d;
+    --tx:#c9d1d9; --mut:#8b949e; --hd:#f0f6fc;
+    --bl:#58a6ff; --vi:#a371f7; --gr:#3fb950; --rd:#f85149; --am:#d29922;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+    --blglow:rgba(88,166,255,.12); --grglow:rgba(63,185,80,.12); --rdglow:rgba(248,81,73,.10);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font:17px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;
+    background-image:radial-gradient(circle at 1px 1px,#1b2230 1px,transparent 0);background-size:34px 34px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 22px 80px}
+  h1{color:var(--hd);font-size:2.2rem;line-height:1.15;margin:0 0 10px;letter-spacing:-.02em}
+  h2{color:var(--hd);font-size:1.55rem;margin:54px 0 10px;letter-spacing:-.01em}
+  h3{color:var(--hd);font-size:1.1rem;margin:0 0 8px}
+  p{margin:0 0 16px}
+  .lead{font-size:1.18rem;color:#aeb6c0;max-width:760px}
+  .kicker{display:inline-block;font:600 .72rem/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+    color:var(--vi);background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:7px 13px;margin-bottom:18px}
+  .mut{color:var(--mut)}
+  code{font-family:var(--mono);font-size:.92em;background:#1b2230;padding:2px 6px;border-radius:5px;color:#d6deeb}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:22px 24px;margin:16px 0}
+  .pill{display:inline-block;font:600 .8rem/1 var(--mono);padding:5px 10px;border-radius:7px;margin:2px}
+  .pill-bl{color:var(--bl);background:var(--blglow);border:1px solid rgba(88,166,255,.3)}
+  .pill-gr{color:var(--gr);background:var(--grglow);border:1px solid rgba(63,185,80,.3)}
+  .pill-rd{color:var(--rd);background:var(--rdglow);border:1px solid rgba(248,81,73,.3)}
+
+  /* problem visual */
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+  @media(max-width:720px){.vs{grid-template-columns:1fr}}
+  .vs .card{margin:0}
+  .vs h3 small{font-weight:400;color:var(--mut);font-size:.78rem;font-family:var(--mono)}
+  .docpile{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+  .doc{width:13px;height:17px;border-radius:2px;background:#2b3344;border:1px solid #3a4459}
+  .doc.hot{background:var(--gr);border-color:var(--gr);box-shadow:0 0 6px var(--gr)}
+  .doc.warm{background:#26405e;border-color:var(--bl)}
+
+  /* demo grid */
+  .demo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+  @media(max-width:860px){.demo{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--bd);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .panel-h{padding:13px 18px;border-bottom:1px solid var(--bd);font:600 .9rem/1 system-ui;color:var(--hd);
+    display:flex;align-items:center;gap:8px;background:var(--card2)}
+  .panel-h .dot{width:9px;height:9px;border-radius:50%}
+  .chatlog{padding:16px;min-height:300px;max-height:440px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:.96rem;line-height:1.5;animation:pop .25s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .msg.user{align-self:flex-end;background:#26405e;color:#eaf2ff;border-bottom-right-radius:4px}
+  .msg.bot{align-self:flex-start;background:var(--card2);border:1px solid var(--bd);border-bottom-left-radius:4px}
+  .msg .src{margin-top:7px;font:600 .72rem/1.3 var(--mono);display:flex;align-items:center;gap:6px}
+  .src.ok{color:var(--gr)} .src.no{color:var(--am)}
+  .composer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--bd);background:var(--card2)}
+  .composer input{flex:1;background:var(--bg);border:1px solid var(--bd2);border-radius:9px;color:var(--tx);
+    padding:10px 13px;font-size:.95rem;font-family:inherit;outline:none}
+  .composer input:focus{border-color:var(--bl)}
+  .composer button{background:var(--bl);color:#06203f;border:none;border-radius:9px;padding:0 18px;font-weight:700;cursor:pointer;font-size:.95rem}
+  .composer button:hover{filter:brightness(1.08)}
+  .presets{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 0}
+  .presets button{background:var(--card2);border:1px solid var(--bd2);color:var(--tx);border-radius:20px;
+    padding:7px 13px;font-size:.84rem;cursor:pointer;transition:.15s}
+  .presets button:hover{border-color:var(--bl);color:var(--hd)}
+  .presets button.break{border-color:rgba(248,81,73,.4);color:#ffb4ae}
+  .presets button.break:hover{border-color:var(--rd)}
+
+  /* hood */
+  .hood{padding:16px;font-size:.9rem;overflow-y:auto;max-height:484px}
+  .hood .step{margin-bottom:16px}
+  .hood .lbl{font:600 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:7px}
+  .toks{display:flex;flex-wrap:wrap;gap:5px}
+  .tok{font:600 .8rem/1 var(--mono);background:var(--blglow);color:var(--bl);border:1px solid rgba(88,166,255,.3);padding:4px 8px;border-radius:6px}
+  .match{background:var(--card2);border:1px solid var(--bd);border-radius:9px;padding:9px 11px;margin-bottom:7px}
+  .match.win{border-color:rgba(63,185,80,.45)}
+  .match .mh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .match .mt{font-weight:600;color:var(--hd);font-size:.9rem}
+  .match .ms{font:600 .76rem/1 var(--mono);color:var(--gr)}
+  .scorebar{height:5px;border-radius:3px;background:#2b3344;margin-top:6px;overflow:hidden}
+  .scorebar i{display:block;height:100%;background:var(--gr);border-radius:3px}
+  .promptbox{background:#0a0e14;border:1px solid var(--bd);border-radius:9px;padding:12px;font-family:var(--mono);
+    font-size:.78rem;line-height:1.5;color:#9fb0c8;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+  .promptbox .k{color:var(--vi)} .promptbox .g{color:var(--gr)} .promptbox .u{color:var(--bl)}
+
+  /* meters */
+  .meters{margin-top:6px}
+  .meter{margin-bottom:13px}
+  .meter .mtop{display:flex;justify-content:space-between;font-size:.84rem;margin-bottom:5px}
+  .meter .mtop b{font-family:var(--mono)}
+  .bar{height:18px;border-radius:6px;background:#0a0e14;border:1px solid var(--bd);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:5px;transition:width .4s ease}
+  .bar.naive i{background:linear-gradient(90deg,#7d2b27,var(--rd))}
+  .bar.cf i{background:linear-gradient(90deg,#1f5e34,var(--gr))}
+  .ratio{font:800 1.6rem/1 var(--mono);color:var(--gr);margin-top:4px}
+  .ratio small{font-size:.8rem;color:var(--mut);font-weight:400;font-family:system-ui}
+
+  /* slider */
+  .sliderwrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .sliderwrap input[type=range]{flex:1;min-width:220px;accent-color:var(--vi)}
+  .kbnum{font:800 1.5rem/1 var(--mono);color:var(--vi)}
+  .callout{border-left:3px solid var(--bl);background:var(--blglow);border-radius:0 10px 10px 0;padding:14px 18px;margin:16px 0}
+  .callout.gr{border-color:var(--gr);background:var(--grglow)}
+  .callout.rd{border-color:var(--rd);background:var(--rdglow)}
+  .callout.am{border-color:var(--am);background:rgba(210,153,34,.1)}
+  pre.code{background:#0a0e14;border:1px solid var(--bd);border-radius:12px;padding:18px 20px;overflow-x:auto;
+    font-family:var(--mono);font-size:.86rem;line-height:1.6;color:#c5d1e0}
+  pre.code .c{color:#6e7d91} pre.code .kw{color:var(--vi)} pre.code .s{color:var(--gr)} pre.code .f{color:var(--bl)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--bd);color:var(--mut);font-size:.9rem;text-align:center}
+  .foot a{color:var(--bl);text-decoration:none}
+  ul.clean{margin:0 0 16px;padding-left:0;list-style:none}
+  ul.clean li{padding:8px 0 8px 28px;position:relative;border-bottom:1px solid var(--bd)}
+  ul.clean li::before{content:"→";position:absolute;left:4px;color:var(--vi);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">ContextForge · plain-English demo</span>
+  <h1>How do you give a chatbot a memory bigger than its brain?</h1>
+  <p class="lead">Imagine you run <b>Nimbus</b>, a coffee subscription company. You want a support bot that knows
+  everything — shipping, refunds, every coffee, every brewing guide. But a chatbot can only read so much text at once.
+  Your help docs don't fit. So what do you do? This page is the answer you can <em>click</em>.</p>
+
+  <!-- PROBLEM -->
+  <h2>The problem, in one picture</h2>
+  <p class="mut">A language model has a fixed reading limit per message (its "context window"). Your knowledge base does not.</p>
+  <div class="vs">
+    <div class="card">
+      <h3>❌ The naive way <small>paste everything</small></h3>
+      <p style="margin:0 0 6px">Stuff all your docs into every single message. Works with 5 docs. Falls apart with 500:
+      it's slow, it's expensive, and eventually it just <b style="color:var(--rd)">doesn't fit</b>.</p>
+      <div class="docpile" id="pileNaive"></div>
+      <div style="margin-top:10px"><span class="pill pill-rd">every doc · every message · 💸</span></div>
+    </div>
+    <div class="card">
+      <h3>✅ The ContextForge way <small>retrieve what's needed</small></h3>
+      <p style="margin:0 0 6px">Store every doc on disk. For each question, pull only the <b style="color:var(--gr)">2–3 docs that
+      actually answer it</b> into the message. The other 9,997 stay on the shelf.</p>
+      <div class="docpile" id="pileCF"></div>
+      <div style="margin-top:10px"><span class="pill pill-gr">3 docs · this message · ✓</span></div>
+    </div>
+  </div>
+
+  <!-- DEMO -->
+  <h2>Try it yourself — this is real retrieval</h2>
+  <p>Ask the Nimbus bot a question. On the right, watch <b>exactly</b> what happens under the hood:
+  which words it pulls out, which docs it grabs, and the actual message it builds. Nothing here is faked —
+  the panel runs the same keyword-ranking math (BM25) that ContextForge uses internally.</p>
+
+  <div class="presets" id="presets"></div>
+
+  <div class="demo">
+    <div class="panel">
+      <div class="panel-h"><span class="dot" style="background:var(--bl)"></span> Nimbus Support Bot</div>
+      <div class="chatlog" id="chatLog"></div>
+      <div class="composer">
+        <input id="chatInput" placeholder="Ask about shipping, refunds, a coffee, brewing…" autocomplete="off">
+        <button id="sendBtn">Ask</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="dot" style="background:var(--vi)"></span> Under the hood</div>
+      <div class="hood" id="hood">
+        <p class="mut" style="margin:0">👆 Ask a question and this panel shows the retrieval, step by step.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLATNESS -->
+  <h2>The magic trick: grow the knowledge base to 10,000 docs</h2>
+  <p>Here's the part that matters. Drag the slider to add more help docs to Nimbus. Watch what happens to the
+  size of each message the bot sends.</p>
+  <div class="card">
+    <div class="sliderwrap">
+      <div>Knowledge base:<br><span class="kbnum" id="kbNum">24</span> <span class="mut">docs</span></div>
+      <input type="range" id="kbSlider" min="24" max="10000" value="24" step="1">
+    </div>
+    <div class="meters" style="margin-top:22px">
+      <div class="meter">
+        <div class="mtop"><span>❌ Naive — paste every doc each message</span><b id="naiveTok" style="color:var(--rd)">—</b></div>
+        <div class="bar naive"><i id="naiveBar" style="width:2%"></i></div>
+      </div>
+      <div class="meter">
+        <div class="mtop"><span>✅ ContextForge — retrieve top 3</span><b id="cfTok" style="color:var(--gr)">—</b></div>
+        <div class="bar cf"><i id="cfBar" style="width:2%"></i></div>
+      </div>
+    </div>
+    <div class="ratio" id="ratio">—</div>
+  </div>
+  <div class="callout gr">
+    <b>That flat green bar is the whole point.</b> The naive message grows without limit and eventually overflows the
+    model entirely. ContextForge's message stays the same tiny size whether you have 24 docs or 10 million — because it
+    only ever sends the handful that answer <em>this</em> question. Your cost stops depending on how much you know.
+  </div>
+
+  <!-- THE WALL -->
+  <h2>And the honest part: where it breaks</h2>
+  <p>This isn't magic, it's keyword matching — so it has a real blind spot. It finds docs that share <em>words</em> with
+  your question. Ask the same thing in <em>different words</em>, and it can whiff. Click this and watch it miss:</p>
+  <div class="presets"><button class="break" id="breakBtn">🧱 "When does it show up at my door?" (a paraphrase)</button></div>
+  <div class="callout am">
+    <b>Why it missed:</b> the shipping doc says "orders <em>arrive</em> in 3–5 business <em>days</em>." Your question said
+    "<em>show up</em> at my <em>door</em>." Zero shared words → the keyword search never finds it, even though the answer
+    is sitting right there. This is the one real limitation, and it's why you pair ContextForge with a capable model and
+    a strict "don't guess" instruction — so when retrieval misses, the bot says <em>"I don't have that"</em> instead of
+    inventing an answer.
+  </div>
+
+  <!-- CODE -->
+  <h2>The whole thing, in real code</h2>
+  <p>Everything you just clicked is about <b>15 lines</b>. This is the actual ContextForge API:</p>
+  <div class="grid2">
+    <div>
+      <p class="pill pill-gr">✅ With ContextForge</p>
+      <pre class="code"><span class="c"># Once: load your whole knowledge base</span>
+<span class="kw">from</span> contextforge <span class="kw">import</span> ContextForge
+
+cf = ContextForge(
+    db_path=<span class="s">"nimbus.db"</span>,
+    min_score=<span class="s">2.0</span>,   <span class="c"># ignore weak matches</span>
+)
+<span class="kw">await</span> cf.<span class="f">ingest</span>(<span class="s">"./help_docs"</span>)  <span class="c"># 10,000 files</span>
+
+<span class="c"># Per question: it grabs only what's needed</span>
+reply = <span class="kw">await</span> cf.<span class="f">chat</span>(<span class="s">"How do I get a refund?"</span>)
+<span class="c"># → only the Returns doc enters the prompt.
+# The other 9,999 stay on disk. ~150 tokens.</span></pre>
+    </div>
+    <div>
+      <p class="pill pill-rd">❌ The naive way</p>
+      <pre class="code"><span class="c"># Paste the entire knowledge base into
+# every single message, forever:</span>
+
+docs = load_all(<span class="s">"./help_docs"</span>)   <span class="c"># 10,000 files</span>
+
+prompt = (
+    SYSTEM +
+    <span class="s">"\n"</span>.join(docs) +        <span class="c"># 👈 everything</span>
+    user_question
+)
+reply = <span class="kw">await</span> llm.<span class="f">chat</span>(prompt)
+<span class="c"># → ~600,000 tokens. Every turn.
+# Slow, expensive, and won't even fit. 💸</span></pre>
+    </div>
+  </div>
+
+  <!-- USEFUL -->
+  <h2>So… how is this useful to you?</h2>
+  <p>Swap "Nimbus coffee" for anything with more docs than fits in a prompt. Same trick, instant payoff:</p>
+  <ul class="clean">
+    <li><b>Customer support bot</b> — chat over your entire help center without re-pasting it every message.</li>
+    <li><b>Internal "ask the handbook"</b> — HR policies, runbooks, wikis. Answers cite the one doc they came from.</li>
+    <li><b>Product / API assistant</b> — hundreds of pages of docs, the user gets only the relevant slice.</li>
+    <li><b>Personal knowledge agent</b> — years of notes on disk, each question pulls the few that matter.</li>
+  </ul>
+  <div class="callout">
+    <b>The one-sentence version:</b> ContextForge lets a chatbot <em>act like</em> it has read everything you own, while
+    only ever <em>reading</em> the few paragraphs each question needs. Cheap, fast, and it doesn't fall over when your
+    knowledge base grows — as long as people ask using words your docs actually contain.
+  </div>
+
+  <div class="foot">
+    Live demo · real BM25 retrieval running in your browser · synthetic "Nimbus" data.<br>
+    Companion to the <a href="report.html">empirical report</a> and the <a href="explainer.html">proof-style explainer</a>.
+  </div>
+
+</div>
+
+<script>
+/* ---------- Nimbus knowledge base (24 real docs) ---------- */
+const KB = [
+ {id:"returns",t:"Returns & Refunds",b:"Not happy with your beans? Return any unopened bag within 30 days for a full refund. Opened bags qualify for store credit. Email support to start a refund.",a:"You can return any unopened bag within 30 days for a full refund. Opened bags get store credit — just email support to start it."},
+ {id:"ship-us",t:"US Shipping",b:"Domestic orders arrive in 3 to 5 business days via standard shipping. Orders over forty dollars ship free. Tracking is emailed when your order leaves the roastery.",a:"US orders arrive in 3–5 business days. Free shipping over $40, and you'll get tracking by email when it leaves the roastery."},
+ {id:"ship-intl",t:"International Shipping",b:"We ship worldwide. International delivery takes 7 to 14 business days. Customs fees are the customer's responsibility and are not included at checkout.",a:"We ship worldwide — international delivery is 7–14 business days. Heads up: customs fees aren't included and are paid by you."},
+ {id:"tiers",t:"Subscription Plans",b:"Three subscription tiers: Starter is one bag monthly, Pro is two bags monthly, Connoisseur is four bags plus early access to rare lots. Switch tiers anytime.",a:"Three plans: Starter (1 bag/mo), Pro (2 bags/mo), and Connoisseur (4 bags + early access to rare lots). You can switch anytime."},
+ {id:"pause",t:"Pausing Your Subscription",b:"Need a break? Pause your subscription for up to three months from your account dashboard. Billing and shipments stop while paused and resume automatically.",a:"You can pause for up to 3 months right from your dashboard. Billing and shipments stop while paused, then resume automatically."},
+ {id:"cancel",t:"Cancelling",b:"Cancel anytime with no fee from account settings. Cancellation takes effect at the end of your current billing cycle. You keep access until then.",a:"Cancel anytime, no fee, from account settings. It takes effect at the end of your current billing cycle — you keep access until then."},
+ {id:"ethiopia",t:"Ethiopia Yirgacheffe",b:"Our Ethiopia Yirgacheffe is a bright, floral light roast with notes of jasmine, bergamot, and lemon. Grown at high altitude and washed processed.",a:"The Ethiopia Yirgacheffe is a bright, floral light roast — jasmine, bergamot, and lemon. High-altitude, washed process."},
+ {id:"colombia",t:"Colombia Supremo",b:"Colombia Supremo is a balanced medium roast with caramel sweetness, milk chocolate, and a soft red-apple acidity. A crowd-pleasing everyday cup.",a:"Colombia Supremo is a balanced medium roast: caramel, milk chocolate, soft red-apple acidity. A great everyday cup."},
+ {id:"sumatra",t:"Sumatra Mandheling",b:"Sumatra Mandheling is a bold, earthy dark roast with cedar, dark chocolate, and low acidity. Heavy body, great for espresso and French press.",a:"Sumatra Mandheling is a bold, earthy dark roast — cedar, dark chocolate, low acidity, heavy body. Excellent in espresso or French press."},
+ {id:"roast",t:"Roast Levels",b:"Light roast keeps origin flavor and acidity. Medium balances sweetness and body. Dark roast is bold and smoky. Each bag is labeled with its roast level.",a:"Light = bright and acidic, keeps origin character. Medium = balanced sweetness and body. Dark = bold and smoky. Every bag is labeled."},
+ {id:"grind",t:"Grind Sizes",b:"Coarse grind suits French press, medium suits drip and pour over, fine suits espresso. We grind to order or ship whole bean for maximum freshness.",a:"Coarse for French press, medium for drip/pour-over, fine for espresso. We grind to order, or ship whole bean for max freshness."},
+ {id:"frenchpress",t:"French Press Guide",b:"For French press use a coarse grind, a one to fifteen coffee to water ratio, water just off the boil, and a four minute steep before pressing slowly.",a:"French press: coarse grind, 1:15 coffee-to-water, water just off the boil, steep 4 minutes, then press slowly."},
+ {id:"pourover",t:"Pour-Over Guide",b:"For pour over use a medium grind, rinse the filter, bloom with twice the coffee weight in water for thirty seconds, then pour in slow spirals.",a:"Pour-over: medium grind, rinse the filter, bloom 30 seconds with 2× the coffee weight in water, then pour in slow spirals."},
+ {id:"espresso",t:"Espresso Guide",b:"For espresso use a fine grind and an eighteen gram dose, aim for a twenty five to thirty second extraction yielding about thirty six grams in the cup.",a:"Espresso: fine grind, 18 g dose, aim for a 25–30 second shot pulling about 36 g out. Adjust grind to hit the time."},
+ {id:"decaf",t:"Decaf Options",b:"Every coffee is available decaffeinated using the Swiss Water process, which removes caffeine without chemical solvents while keeping flavor intact.",a:"Yes — every coffee comes in decaf, made with the chemical-free Swiss Water process that keeps the flavor intact."},
+ {id:"gift",t:"Gift Subscriptions",b:"Gift subscriptions come in three, six, or twelve month prepaid options. The recipient picks their own coffees and there is no auto-renewal on gifts.",a:"Gift subscriptions come prepaid in 3, 6, or 12 months. The recipient chooses their own coffees, and gifts never auto-renew."},
+ {id:"referral",t:"Referral Program",b:"Refer a friend and you both get a free bag. Share your referral link from your dashboard. The reward applies after your friend's first order ships.",a:"Refer a friend and you both get a free bag. Grab your link in the dashboard — the reward lands after their first order ships."},
+ {id:"storage",t:"Storing Your Beans",b:"Store beans in an airtight container away from light, heat, and moisture. Do not refrigerate. Use within four weeks of the roast date for peak flavor.",a:"Keep beans airtight, away from light, heat, and moisture — don't refrigerate. Best within 4 weeks of the roast date."},
+ {id:"payment",t:"Payment Methods",b:"We accept all major credit cards, Apple Pay, Google Pay, and PayPal. Payment is processed securely and your card is charged on your billing date.",a:"We take all major cards, Apple Pay, Google Pay, and PayPal. Everything's processed securely and charged on your billing date."},
+ {id:"billing",t:"Billing Cycle",b:"Subscriptions bill on the same day each month, the date of your first order. You receive an email receipt and a reminder three days before each charge.",a:"You're billed monthly on the date of your first order. You'll get a receipt by email plus a reminder 3 days before each charge."},
+ {id:"bulk",t:"Office & Bulk Orders",b:"Office and bulk orders over ten bags get volume pricing and a dedicated account manager. Contact our sales team for a custom quote and invoicing.",a:"Bulk and office orders over 10 bags get volume pricing and a dedicated account manager. Contact sales for a custom quote."},
+ {id:"sustain",t:"Sustainability",b:"We buy direct trade, pay above fair-trade prices, and ship in compostable bags. A portion of every subscription funds reforestation at origin farms.",a:"We're direct-trade, pay above fair-trade, and ship in compostable bags. Part of every subscription funds reforestation at origin."},
+ {id:"loyalty",t:"Loyalty Points",b:"Earn one point per dollar spent. One hundred points equals a free bag. Points never expire and stack with referral rewards. Track them in your dashboard.",a:"You earn 1 point per $1; 100 points = a free bag. Points never expire and stack with referral rewards. Track them in your dashboard."},
+ {id:"support",t:"Contact Support",b:"Reach support by email any day from seven in the morning to nine at night Eastern, or by live chat on weekdays. Typical reply time is under two hours.",a:"Email support 7am–9pm ET any day, or live chat on weekdays. We usually reply in under 2 hours."}
+];
+
+/* ---------- real BM25 (mirrors ContextForge's index.py) ---------- */
+const STOP=new Set("a an the is are was were be been do does did of to in on at for and or but with from by as this that these those your you we our it its i my me can how what when where which will would should could about get got".split(" "));
+const tok=s=>s.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w&&w.length>1&&!STOP.has(w));
+function buildBM25(docs,k1=1.5,b=0.75){
+  const N=docs.length, df={}, tf=[], len=[]; let total=0;
+  docs.forEach((d,i)=>{
+    const ts=tok((d.t+" ")+(d.t+" ")+d.b);           // title weighted 2x, like CF
+    len[i]=ts.length; total+=ts.length;
+    const f={}; ts.forEach(t=>f[t]=(f[t]||0)+1); tf[i]=f;
+    Object.keys(f).forEach(t=>df[t]=(df[t]||0)+1);
+  });
+  const avgdl=total/N||1;
+  return {search(q,topK=3,minScore=0){
+    const qs=tok(q); if(!qs.length) return {terms:[],hits:[]};
+    const scored=docs.map((d,i)=>{
+      let s=0; const dl=len[i];
+      qs.forEach(t=>{const f=tf[i][t]; if(!f)return;
+        const idf=Math.log(1+(N-(df[t]||0)+0.5)/((df[t]||0)+0.5));
+        s+=idf*(f*(k1+1))/(f+k1*(1-b+b*dl/avgdl));});
+      return {doc:d,score:s,i};
+    }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+    return {terms:qs,hits:scored.filter(x=>x.score>=minScore).slice(0,topK)};
+  }};
+}
+/* filler docs so the KB can "grow" — generic text that won't match real questions */
+function fillerDoc(n){return {id:"f"+n,t:"Coffee Tip Number "+n,b:"General roastery note "+n+" covering miscellaneous internal logistics, batch identifiers, and warehouse shelf codes unrelated to common questions.",a:"(internal note)"};}
+function kbOfSize(n){const out=KB.slice();for(let i=KB.length;i<n;i++)out.push(fillerDoc(i));return out;}
+
+const MIN_SCORE=2.0, TOPK=3, CHARS_PER_TOK=4;
+const SYSTEM="You are Nimbus support. Answer using ONLY the knowledge below. If the answer is not in it, say you do not have that information — do not guess.";
+const estTok=s=>Math.round(s.length/CHARS_PER_TOK);
+let curKB=24, bm25=buildBM25(kbOfSize(curKB));
+const realTokTotal=KB.reduce((a,d)=>a+estTok(d.t+" "+d.b+"\n"),0);
+const fillerTokAvg=estTok(fillerDoc(99).t+" "+fillerDoc(99).b+"\n");
+
+/* ---------- chat + hood ---------- */
+const chatLog=document.getElementById("chatLog"), hood=document.getElementById("hood");
+function addMsg(text,who,src){
+  const m=document.createElement("div");m.className="msg "+who;m.innerHTML=text.replace(/</g,"&lt;");
+  if(src)m.innerHTML+=`<div class="src ${src.ok?'ok':'no'}">${src.ok?'📚 answered from: '+src.name:'🚫 nothing matched — abstains, no guess'}</div>`;
+  chatLog.appendChild(m);chatLog.scrollTop=chatLog.scrollHeight;
+}
+function ask(q){
+  if(!q.trim())return;
+  addMsg(q,"user");
+  const {terms,hits}=bm25.search(q,TOPK,MIN_SCORE);
+  const win=hits.length?hits[0]:null;
+  // bot answer (grounded: only from retrieved doc; else abstain)
+  setTimeout(()=>{
+    if(win && win.doc.a && win.doc.id[0]!=="f")
+      addMsg(win.doc.a,"bot",{ok:true,name:win.doc.t});
+    else
+      addMsg("I don't have that in Nimbus's knowledge base, so I won't guess. Try rephrasing, or contact support.","bot",{ok:false});
+  },220);
+  renderHood(q,terms,hits);
+}
+function renderHood(q,terms,hits){
+  const retrievedTok=hits.reduce((a,h)=>a+estTok(h.doc.t+" "+h.doc.b),0)||0;
+  const cfPromptTok=estTok(SYSTEM)+retrievedTok+estTok(q);
+  const naivePromptTok=estTok(SYSTEM)+realTokTotal+(curKB-24)*fillerTokAvg+estTok(q);
+  const maxS=hits.length?hits[0].score:1;
+  let h=`<div class="step"><div class="lbl">1 · Words pulled from your question</div><div class="toks">${terms.map(t=>`<span class="tok">${t}</span>`).join("")||'<span class="mut">none</span>'}</div></div>`;
+  h+=`<div class="step"><div class="lbl">2 · Docs ranked by keyword match (of ${curKB.toLocaleString()})</div>`;
+  if(hits.length){hits.forEach((x,i)=>{h+=`<div class="match ${i===0?'win':''}"><div class="mh"><span class="mt">${i===0?'✓ ':''}${x.doc.t}</span><span class="ms">score ${x.score.toFixed(2)}</span></div><div class="scorebar"><i style="width:${Math.max(8,100*x.score/maxS)}%"></i></div></div>`;});}
+  else{h+=`<div class="match" style="border-color:rgba(210,153,34,.4)"><span class="mt" style="color:var(--am)">No doc cleared the relevance bar (min ${MIN_SCORE}).</span><div class="mut" style="font-size:.82rem;margin-top:4px">So nothing gets injected — the bot abstains instead of bluffing.</div></div>`;}
+  h+=`</div>`;
+  const kbBlock=hits.length?hits.map(x=>`<span class="g">### ${x.doc.t}</span>\n${x.doc.b}`).join("\n\n"):"(nothing retrieved)";
+  h+=`<div class="step"><div class="lbl">3 · The message actually sent to the model</div><div class="promptbox"><span class="k">SYSTEM:</span> ${SYSTEM}\n\n<span class="k">## Knowledge</span>\n${kbBlock}\n\n<span class="u">USER:</span> ${q}</div></div>`;
+  h+=`<div class="step"><div class="lbl">4 · Size of that message</div><div class="meters">
+    <div class="meter"><div class="mtop"><span>If we pasted all ${curKB.toLocaleString()} docs</span><b style="color:var(--rd)">${naivePromptTok.toLocaleString()} tok</b></div><div class="bar naive"><i style="width:100%"></i></div></div>
+    <div class="meter"><div class="mtop"><span>ContextForge sent</span><b style="color:var(--gr)">${cfPromptTok.toLocaleString()} tok</b></div><div class="bar cf"><i style="width:${Math.max(2,100*cfPromptTok/naivePromptTok)}%"></i></div></div>
+    </div><div class="ratio">${(naivePromptTok/cfPromptTok).toFixed(0)}× smaller <small>this message</small></div></div>`;
+  hood.innerHTML=h;
+}
+
+/* ---------- presets ---------- */
+const PRESETS=["How do I get a refund?","When will my order arrive?","What subscription plans do you have?","Tell me about your Ethiopia coffee","How do I make a pour over?","Can I pause my subscription?","Do you have decaf?"];
+const pc=document.getElementById("presets");
+PRESETS.forEach(p=>{const b=document.createElement("button");b.textContent=p;b.onclick=()=>ask(p);pc.appendChild(b);});
+document.getElementById("sendBtn").onclick=()=>{const i=document.getElementById("chatInput");ask(i.value);i.value="";};
+document.getElementById("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"){ask(e.target.value);e.target.value="";}});
+document.getElementById("breakBtn").onclick=()=>ask("When does it show up at my door?");
+
+/* ---------- slider / flatness ---------- */
+const naiveBar=document.getElementById("naiveBar"),cfBar=document.getElementById("cfBar"),
+      naiveTokEl=document.getElementById("naiveTok"),cfTokEl=document.getElementById("cfTok"),
+      ratioEl=document.getElementById("ratio"),kbNum=document.getElementById("kbNum");
+function updateMeters(n){
+  curKB=n; kbNum.textContent=n.toLocaleString();
+  bm25=buildBM25(kbOfSize(Math.min(n,3000))); // cap live-index rebuild for perf; meter math uses full n
+  const naive=estTok(SYSTEM)+realTokTotal+(n-24)*fillerTokAvg+12;
+  const cf=estTok(SYSTEM)+150+12; // representative top-3 retrieval
+  naiveTokEl.textContent=naive.toLocaleString()+" tok";
+  cfTokEl.textContent=cf.toLocaleString()+" tok";
+  const maxRef=estTok(SYSTEM)+realTokTotal+(10000-24)*fillerTokAvg;
+  naiveBar.style.width=Math.max(2,100*naive/maxRef)+"%";
+  cfBar.style.width=Math.max(1.2,100*cf/maxRef)+"%";
+  ratioEl.innerHTML=(naive/cf).toFixed(0)+"× <small>fewer tokens per message — and it never overflows</small>";
+}
+document.getElementById("kbSlider").addEventListener("input",e=>updateMeters(+e.target.value));
+
+/* ---------- problem-section dot piles ---------- */
+function pile(el,hotIdx){let h="";for(let i=0;i<60;i++){let c="doc";if(el==="pileCF"&&hotIdx.includes(i))c="doc hot";if(el==="pileNaive")c="doc warm";h+=`<span class="${c}"></span>`;}document.getElementById(el).innerHTML=h;}
+pile("pileNaive",[]);pile("pileCF",[7,22,41]);
+
+/* ---------- boot ---------- */
+updateMeters(24);
+addMsg("Hi! I'm the Nimbus support bot. Ask me anything — or tap a question below. 👇","bot");
+</script>
+</body>
+</html>
